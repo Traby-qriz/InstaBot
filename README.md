@@ -1,4 +1,5 @@
-## InstaBot V 1.0.0
+<h1 align="center"> 𝐈𝐍𝐒𝐓𝐀-𝐁𝐎𝐓 </h1>
+<h1 align="center"> 𝖵𝖤𝖱𝖲𝖨𝖮𝖭 1.0.0 </h1>
 
 Automate Instagram login and session management with this efficient Node.js script.
 
