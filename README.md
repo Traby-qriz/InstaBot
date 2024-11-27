@@ -6,7 +6,15 @@ Automate Instagram login and session management with this efficient Node.js scri
 ## NB:
 Sometimes Instagram may detect suspicious login attempt and block it.
 
-# Extensible Features
+## Features
+
+1. **Automatic Login**: *Seamless Instagram authentication*
+2. **Session Cookie Management**: *Efficient cookie handling*
+3. **Customizable Device Profiles**: *Flexible device configuration*
+4. **Error Handling**: *Robust logging and error management*
+
+
+## Extensible Features
 
 Developers can build upon InstaBot's foundation to add features such as:
 
@@ -19,12 +27,7 @@ Developers can build upon InstaBot's foundation to add features such as:
 7. `User profiling`
 8. `Engagement analytics`
 
-## Features
 
-1. **Automatic Login**: *Seamless Instagram authentication*
-2. **Session Cookie Management**: *Efficient cookie handling*
-3. **Customizable Device Profiles**: *Flexible device configuration*
-4. **Error Handling**: *Robust logging and error management*
 
 ## Requirements 
 
