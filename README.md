@@ -12,9 +12,9 @@ Automate Instagram login and session management with this efficient Node.js scri
 
 ## Requirements 
 
-1. Node.js (>=14.17.0)
-2. instagram-private-api library
-3. lolcatjs library (optional)
+1. `Node.js` (>=14.17.0)
+2. `instagram-private-api` library
+3. `lolcatjs` library
 
 ## Installation 
 
