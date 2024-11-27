@@ -3,6 +3,19 @@
 
 Automate Instagram login and session management with this efficient Node.js script.
 
+# Extensible Features
+
+Developers can build upon InstaBot's foundation to add features such as:
+
+1. Auto-follow/unfollow
+2. Auto-like/dislike
+3. Auto-comment
+4. Post scheduling
+5. Story viewing
+6. Hashtag tracking
+7. User profiling
+8. Engagement analytics
+
 ## Features
 
 1. **Automatic Login**: *Seamless Instagram authentication*
