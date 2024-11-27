@@ -18,7 +18,8 @@ Automate Instagram login and session management with this efficient Node.js scri
 
 ## Installation 
 
-1. Clone repository:
+1. Fork the repository [`Fork`](https://github.com/Dark-Xploit/InstaBot/fork)
+2. Clone repository:
 ```
 git clone https://github.com/Dark-Xploit/InstaBot.git
 ```
@@ -26,7 +27,7 @@ git clone https://github.com/Dark-Xploit/InstaBot.git
 ```
 npm install
 ```
-5. Edit `config.js` with Instagram credentials:
+4. Edit `config.js` with Instagram credentials:
 
 ```
 module.exports = {
