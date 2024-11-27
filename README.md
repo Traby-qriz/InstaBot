@@ -19,10 +19,14 @@ Automate Instagram login and session management with this efficient Node.js scri
 ## Installation 
 
 1. Clone repository:
-```git clone https://github.com/Dark-Xploit/InstaBot.git```
-2. Install dependencies:
-```npm install```
-3. Edit `config.js` with Instagram credentials:
+```
+git clone https://github.com/Dark-Xploit/InstaBot.git
+```
+3. Install dependencies:
+```
+npm install
+```
+5. Edit `config.js` with Instagram credentials:
 
 ```
 module.exports = {
@@ -33,7 +37,10 @@ module.exports = {
 
 ## Usage
 
-1. Run script: ```node index.js```
+1. Run script:
+```
+node index.js
+```
 2. InstaBot will login to Instagram and save session cookies, then keep your account active 24/7
 
 ## Security Considerations
