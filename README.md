@@ -1,6 +1,8 @@
 <h1 align="center"> 𝐈𝐍𝐒𝐓𝐀-𝐁𝐎𝐓 </h1>
 <h1 align="center"> 𝖵𝖤𝖱𝖲𝖨𝖮𝖭 1.0.0 </h1>
 
+<a href="https://ibb.co/QnFLML0"><img src="https://i.ibb.co/jGvmDmt/Screenshot-20241127-043225-Whats-App.jpg" alt="Screenshot-20241127-043225-Whats-App" border="0"></a>
+
 Automate Instagram login and session management with this efficient Node.js script.
 
 ## NB:
