@@ -4,7 +4,8 @@
 Automate Instagram login and session management with this efficient Node.js script.
 
 ## NB:
-Sometimes Instagram may detect suspicious login attempt and block it.
+- Sometimes Instagram may detect suspicious login attempt and block it. Be aware of this.
+- You may also encounter a checkpoint challenge but I've tried my best to bypass this.
 
 ## Features
 
