@@ -1,25 +1,25 @@
-# InstaBot
+## InstaBot V 1.0.0
 
 Automate Instagram login and session management with this efficient Node.js script.
 
-*Features*
+## Features
 
-1. *Automatic Login*: Seamless Instagram authentication
-2. *Session Cookie Management*: Efficient cookie handling
-3. *Customizable Device Profiles*: Flexible device configuration
-4. *Error Handling*: Robust logging and error management
+1. **Automatic Login**: *Seamless Instagram authentication*
+2. **Session Cookie Management**: *Efficient cookie handling*
+3. **Customizable Device Profiles**: *Flexible device configuration*
+4. **Error Handling**: *Robust logging and error management*
 
-*Requirements*
+## Requirements 
 
 1. Node.js (>=14.17.0)
 2. instagram-private-api library
 3. lolcatjs library (optional)
 
-*Installation*
+## Installation 
 
 1. Clone repository: `git clone https://github.com/Dark-Xploit/InstaBot.git`
 2. Install dependencies: `npm install`
-3. Create `config.js` with Instagram credentials:
+3. Edit `config.js` with Instagram credentials:
 
 ```
 module.exports = {
@@ -28,18 +28,18 @@ module.exports = {
 };
 ```
 
-*Usage*
+## Usage
 
 1. Run script: `node index.js`
-2. InstaBot will login to Instagram and save session cookies.
+2. InstaBot will login to Instagram and save session cookies, then keep your account active 24/7
 
-*Security Considerations*
+## Security Considerations
 
 1. Respect Instagram's Terms of Service and API usage policies.
 2. Store sensitive user data securely.
 3. Regularly update dependencies.
 
-*License*
+## License
 
 MIT License
 
@@ -52,13 +52,13 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-*Contributing*
+## Contributing
 
 1. Fork the repository.
 2. Create a feature branch.
 3. Submit a pull request.
 
-*Support*
+## Support
 
 1. Open an issue.
 2. Contact [phantomtylor@gmail.com].
