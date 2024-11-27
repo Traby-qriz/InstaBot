@@ -81,6 +81,37 @@ MIT License
 2. Create a feature branch.
 3. Submit a pull request.
 
+# Important Disclaimer
+
+## Instagram Account Safety
+
+Using InstaBot may trigger Instagram's security measures, potentially leading to:
+
+1. Temporary login blocks
+2. Account restrictions
+3. Permanent suspension
+
+## Responsibility
+
+We are not liable for any consequences arising from InstaBot's usage. Users assume all risks.
+
+## Ethical Usage
+
+Avoid misusing InstaBot for:
+
+1. Spamming
+2. Harassing
+3. Unwanted engagement
+4. Violating Instagram's Terms of Service
+
+## Best Practices
+
+1. Use InstaBot responsibly.
+2. Respect Instagram's guidelines.
+3. Avoid excessive automation.
+
+By using InstaBot, you acknowledge these risks and agree to our terms.
+
 ## Support
 
 1. Open an <a href="https://github.com/Dark-Xploit/InstaBot/issues">issue.</a></p>
