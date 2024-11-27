@@ -61,5 +61,5 @@ furnished to do so, subject to the following conditions:
 
 ## Support
 
-1. Open an issue.
-2. Contact [phantomtylor@gmail.com].
+1. Open an <a href="https://github.com/Dark-Xploit/InstaBot/issues">issue.</a></p>
+2. Contact [`Email`](phantomtylor@gmail.com)
