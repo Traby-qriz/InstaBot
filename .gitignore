@@ -1,0 +1,52 @@
+Node.js and npm
+
+node_modules/
+npm-debug.log
+package-lock.json
+
+Project files
+
+*.log
+*.env
+*.pem
+*.key
+*.cert
+
+System files
+
+.DS_Store
+Thumbs.db
+
+IDE and editor files
+
+.vscode/
+.idea/
+.atom/
+
+GitHub files
+
+.github/
+.gitattributes
+
+Render files
+
+.render/
+
+Koyeb files
+
+.koyeb/
+
+Replit files
+
+.replit.db
+
+Miscellaneous
+
+/build/
+/dist/
+*.tmp
+_._~
+
+Instagram API credentials
+
+instagram-credentials.json
