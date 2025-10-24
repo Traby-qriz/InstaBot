@@ -1,7 +1,7 @@
 module.exports = {
 
-  IG_USERNAME: 'your_username',
+  IG_USERNAME: 'casper_x_tech',
 
-  IG_PASSWORD: 'your_password'
+  IG_PASSWORD: 'zxcvbnm.1234'
 
 };
