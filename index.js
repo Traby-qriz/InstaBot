@@ -1,18 +1,17 @@
-const { IgApiClient, IgCheckpointError } = require('instagram-private-api');
+const { IgApiClient, IgCheckpointError, IgApiClientMQTT } = require('instagram-private-api');
 const { IG_USERNAME, IG_PASSWORD } = require('./config.js');
 const lolcat = require('lolcatjs');
 const fs = require('fs');
 
-const ig = new IgApiClient({
-  userAgent: "Instagram 10.3.2 (iPhone9,1; iOS 13_3; en_US; en-US; scale=2.00; 1080x2536)",
-});
+const ig = new IgApiClient();
+const igMqtt = new IgApiClientMQTT();
 
 // Bot information
 const BOT_INFO = {
   name: "CASPER X TECH IG BOT",
   owner: "TRABY CASPER",
   version: "1.0.0",
-  original: "InstaBot by CASPER ACHIEVS"
+  original: "InstaBot by Tylor"
 };
 
 // Available commands
@@ -21,7 +20,9 @@ const COMMANDS = {
   stats: "📊 Show bot statistics",
   viewstories: "👀 View stories from followed accounts now",
   status: "🟢 Check bot status",
-  info: "ℹ️ Show bot information"
+  info: "ℹ️ Show bot information",
+  stop: "🛑 Stop auto story viewing",
+  start: "▶️ Start auto story viewing"
 };
 
 // Bot statistics
@@ -29,7 +30,8 @@ let botStats = {
   storiesViewed: 0,
   commandsProcessed: 0,
   lastActive: new Date(),
-  startTime: new Date()
+  startTime: new Date(),
+  autoViewEnabled: true
 };
 
 // Load saved session
@@ -38,6 +40,7 @@ if (fs.existsSync('session.json')) {
   try {
     state = JSON.parse(fs.readFileSync('session.json', 'utf8'));
     ig.state.deserialize(state);
+    igMqtt.state.deserialize(state);
     console.log(lolcat.fromString("✅ Session loaded successfully", { colors: { text: 'green' } }));
   } catch (sessionError) {
     console.log(lolcat.fromString("⚠️ Corrupted session, creating new one...", { colors: { text: 'yellow' } }));
@@ -52,6 +55,11 @@ if (fs.existsSync('session.json')) {
 
 // Function to view stories from followed accounts
 async function viewFollowedAccountsStories() {
+  if (!botStats.autoViewEnabled) {
+    console.log(lolcat.fromString("⏸️ Auto story viewing is disabled", { colors: { text: 'yellow' } }));
+    return { totalStoriesViewed: 0, usersWithStories: 0 };
+  }
+
   try {
     console.log(lolcat.fromString("🔄 Checking for stories from followed accounts...", { colors: { text: 'blue' } }));
     
@@ -120,53 +128,6 @@ async function viewFollowedAccountsStories() {
   }
 }
 
-// Function to handle DM commands
-async function handleDMCommands() {
-  try {
-    console.log(lolcat.fromString("📨 DM Command Handler Started", { colors: { text: 'blue' } }));
-    
-    // Get direct inbox
-    const inboxFeed = ig.feed.directInbox();
-    const inbox = await inboxFeed.items();
-    
-    for (const thread of inbox) {
-      // Only process threads with unread messages
-      if (thread.last_permanent_item && thread.unread_count > 0) {
-        try {
-          const threadFeed = ig.feed.directThread(thread);
-          const threadItems = await threadFeed.items();
-          
-          // Get the latest messages
-          const latestMessages = threadItems.slice(-thread.unread_count);
-          
-          for (const message of latestMessages) {
-            if (message.item_type === 'text' && message.text) {
-              const command = message.text.toLowerCase().trim();
-              const senderId = message.user_id;
-              
-              console.log(lolcat.fromString(`💬 Received command: "${command}" from user ID: ${senderId}`, { colors: { text: 'cyan' } }));
-              
-              // Process command
-              await processCommand(command, senderId, thread.thread_id);
-              
-              botStats.commandsProcessed++;
-              botStats.lastActive = new Date();
-            }
-          }
-          
-          // Mark as read
-          await ig.directThread.markItemSeen(thread.thread_id, threadItems[threadItems.length - 1].item_id);
-          
-        } catch (threadError) {
-          console.log(lolcat.fromString(`⚠️ Error processing thread: ${threadError.message}`, { colors: { text: 'yellow' } }));
-        }
-      }
-    }
-  } catch (error) {
-    console.log(lolcat.fromString(`❌ Error in DM handler: ${error.message}`, { colors: { text: 'red' } }));
-  }
-}
-
 // Function to process individual commands
 async function processCommand(command, userId, threadId) {
   try {
@@ -190,6 +151,7 @@ async function processCommand(command, userId, threadId) {
                    `• Stories Viewed: ${botStats.storiesViewed}\n` +
                    `• Commands Processed: ${botStats.commandsProcessed}\n` +
                    `• Uptime: ${uptime} minutes\n` +
+                   `• Auto View: ${botStats.autoViewEnabled ? '🟢 ON' : '🔴 OFF'}\n` +
                    `• Last Active: ${botStats.lastActive.toLocaleTimeString()}`;
         break;
         
@@ -212,6 +174,7 @@ async function processCommand(command, userId, threadId) {
                    `• ${BOT_INFO.name}\n` +
                    `• Version: ${BOT_INFO.version}\n` +
                    `• Owner: ${BOT_INFO.owner}\n` +
+                   `• Auto View: ${botStats.autoViewEnabled ? '🟢 ON' : '🔴 OFF'}\n` +
                    `• Last Active: ${botStats.lastActive.toLocaleTimeString()}`;
         break;
         
@@ -224,6 +187,18 @@ async function processCommand(command, userId, threadId) {
                    `• Based on: ${BOT_INFO.original}\n` +
                    `• Started: ${botStats.startTime.toLocaleString()}`;
         break;
+
+      case '/stop':
+      case 'stop':
+        botStats.autoViewEnabled = false;
+        response = `🛑 *Auto Story Viewing DISABLED*\n\nAuto story viewing has been stopped. Use /start to enable it again.`;
+        break;
+
+      case '/start':
+      case 'start':
+        botStats.autoViewEnabled = true;
+        response = `▶️ *Auto Story Viewing ENABLED*\n\nAuto story viewing has been started. Use /stop to disable it.`;
+        break;
         
       default:
         response = `❓ Unknown command: "${command}"\n\n` +
@@ -232,6 +207,8 @@ async function processCommand(command, userId, threadId) {
     }
     
     await sendDMResponse(threadId, response);
+    botStats.commandsProcessed++;
+    botStats.lastActive = new Date();
     
   } catch (error) {
     console.log(lolcat.fromString(`❌ Error processing command: ${error.message}`, { colors: { text: 'red' } }));
@@ -252,6 +229,67 @@ async function sendDMResponse(threadId, message) {
   }
 }
 
+// Initialize MQTT and set up real-time listeners
+async function initializeRealTimeListeners() {
+  try {
+    console.log(lolcat.fromString("🔌 Initializing real-time DM listeners...", { colors: { text: 'blue' } }));
+    
+    // Connect to MQTT for real-time updates
+    await igMqtt.connect();
+    await igMqtt.direct.sendPresence({ state: 'active' });
+    
+    // Listen for new direct messages
+    igMqtt.direct.on('message', async (message) => {
+      try {
+        console.log(lolcat.fromString(`💬 Received real-time message from user: ${message.user_id}`, { colors: { text: 'cyan' } }));
+        
+        // Only process text messages
+        if (message.item_type === 'text' && message.text) {
+          const command = message.text.toLowerCase().trim();
+          const userId = message.user_id;
+          const threadId = message.thread_id;
+          
+          console.log(lolcat.fromString(`📝 Processing command: "${command}"`, { colors: { text: 'cyan' } }));
+          
+          // Process the command
+          await processCommand(command, userId, threadId);
+        }
+      } catch (error) {
+        console.log(lolcat.fromString(`❌ Error in message listener: ${error.message}`, { colors: { text: 'red' } }));
+      }
+    });
+    
+    // Listen for thread updates
+    igMqtt.direct.on('threadUpdate', async (thread) => {
+      try {
+        if (thread.unread_count > 0) {
+          console.log(lolcat.fromString(`📨 Unread messages in thread: ${thread.thread_id}`, { colors: { text: 'blue' } }));
+        }
+      } catch (error) {
+        console.log(lolcat.fromString(`❌ Error in thread update: ${error.message}`, { colors: { text: 'red' } }));
+      }
+    });
+    
+    // Handle connection events
+    igMqtt.on('error', (error) => {
+      console.log(lolcat.fromString(`❌ MQTT Error: ${error.message}`, { colors: { text: 'red' } }));
+    });
+    
+    igMqtt.on('close', () => {
+      console.log(lolcat.fromString("🔌 MQTT Connection closed", { colors: { text: 'yellow' } }));
+    });
+    
+    igMqtt.on('reconnect', () => {
+      console.log(lolcat.fromString("🔌 MQTT Reconnecting...", { colors: { text: 'blue' } }));
+    });
+    
+    console.log(lolcat.fromString("✅ Real-time DM listeners activated!", { colors: { text: 'green' } }));
+    
+  } catch (error) {
+    console.log(lolcat.fromString(`❌ Error initializing real-time listeners: ${error.message}`, { colors: { text: 'red' } }));
+  }
+}
+
 // Function to display bot information
 function displayBotInfo() {
   console.log(lolcat.fromString("┌──────────────────────────────────┐", { colors: true }));
@@ -269,16 +307,21 @@ async function login() {
     // Generate device if no state
     if (!state) {
       ig.state.generateDevice(IG_USERNAME);
+      igMqtt.state.generateDevice(IG_USERNAME);
     }
     
     await ig.simulate.preLoginFlow();
+    await igMqtt.simulate.preLoginFlow();
     
     // Try to login
     const loggedInUser = await ig.account.login(IG_USERNAME, IG_PASSWORD);
+    await igMqtt.account.login(IG_USERNAME, IG_PASSWORD);
+    
     console.log(lolcat.fromString(`✅ Logged in as: ${loggedInUser.username}`, { colors: { text: 'green' } }));
     
     // Save session
     const serializedState = await ig.state.serialize();
+    const serializedStateMqtt = await igMqtt.state.serialize();
     fs.writeFileSync('session.json', JSON.stringify(serializedState));
     
     return true;
@@ -308,19 +351,14 @@ async function login() {
     
     console.log(lolcat.fromString("🚀 CASPER X TECH IG BOT Online", { colors: true }));
     
+    // Initialize real-time DM listeners
+    await initializeRealTimeListeners();
+    
     // Wait a bit before starting auto-view
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Run auto view stories immediately
     await viewFollowedAccountsStories();
-    
-    // Start DM command handler (check every 2 minutes)
-    const DM_CHECK_INTERVAL = 2 * 60 * 1000;
-    setInterval(async () => {
-      await handleDMCommands();
-    }, DM_CHECK_INTERVAL);
-    
-    console.log(lolcat.fromString(`📨 DM Command Handler started - checking every ${DM_CHECK_INTERVAL / 60000} minutes`, { colors: { text: 'blue' } }));
     
     // Schedule auto view stories every 30 minutes
     const AUTO_VIEW_INTERVAL = 30 * 60 * 1000;
@@ -331,7 +369,13 @@ async function login() {
     console.log(lolcat.fromString(`⏰ Auto-view stories scheduled every ${AUTO_VIEW_INTERVAL / 60000} minutes`, { colors: { text: 'blue' } }));
     
     // Keep the bot running
-    setInterval(() => {}, 60000);
+    console.log(lolcat.fromString("🤖 Bot is now listening for DM commands in real-time!", { colors: { text: 'green' } }));
+    
+    process.on('SIGINT', async () => {
+      console.log(lolcat.fromString("🛑 Shutting down bot...", { colors: { text: 'yellow' } }));
+      await igMqtt.destroy();
+      process.exit(0);
+    });
     
   } catch (error) {
     console.error(lolcat.fromString(`❌ Critical Error: ${error.message}`, { colors: { text: 'red' } }));
