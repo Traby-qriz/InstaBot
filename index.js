@@ -12,7 +12,7 @@ const BOT_INFO = {
   name: "CASPER X TECH IG BOT",
   owner: "TRABY CASPER",
   version: "1.0.0",
-  original: "InstaBot by CASPER archive s"
+  original: "InstaBot by Tylor"
 };
 
 // Load saved session
