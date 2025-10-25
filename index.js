@@ -35,8 +35,53 @@ let botStats = {
   autoViewEnabled: true
 };
 
-// Track processed messages to avoid duplicates
+// Track processed messages and viewed stories
 let processedMessages = new Set();
+let viewedStories = new Set();
+
+// Load viewed stories from file
+function loadViewedStories() {
+  try {
+    if (fs.existsSync('viewed_stories.json')) {
+      const data = JSON.parse(fs.readFileSync('viewed_stories.json', 'utf8'));
+      viewedStories = new Set(data);
+      console.log(lolcat.fromString(`📚 Loaded ${viewedStories.size} previously viewed stories`, { colors: { text: 'green' } }));
+    }
+  } catch (error) {
+    console.log(lolcat.fromString("⚠️ Could not load viewed stories history", { colors: { text: 'yellow' } }));
+  }
+}
+
+// Save viewed stories to file
+function saveViewedStories() {
+  try {
+    fs.writeFileSync('viewed_stories.json', JSON.stringify(Array.from(viewedStories)));
+  } catch (error) {
+    console.log(lolcat.fromString("⚠️ Could not save viewed stories", { colors: { text: 'yellow' } }));
+  }
+}
+
+// Clean old viewed stories (older than 24 hours)
+function cleanOldViewedStories() {
+  try {
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const newViewedStories = new Set();
+    
+    for (const storyId of viewedStories) {
+      const [timestamp] = storyId.split('_');
+      if (now - parseInt(timestamp) < twentyFourHours) {
+        newViewedStories.add(storyId);
+      }
+    }
+    
+    viewedStories = newViewedStories;
+    saveViewedStories();
+    console.log(lolcat.fromString(`🧹 Cleaned old stories, ${viewedStories.size} stories in memory`, { colors: { text: 'blue' } }));
+  } catch (error) {
+    console.log(lolcat.fromString("⚠️ Error cleaning old stories", { colors: { text: 'yellow' } }));
+  }
+}
 
 // Load saved session
 let state;
@@ -56,7 +101,7 @@ if (fs.existsSync('session.json')) {
   state = null;
 }
 
-// Function to view stories from followed accounts
+// Function to view stories from followed accounts (WITHOUT RE-VIEWING)
 async function viewFollowedAccountsStories() {
   if (!botStats.autoViewEnabled) {
     console.log(lolcat.fromString("⏸️ Auto story viewing is disabled", { colors: { text: 'yellow' } }));
@@ -79,6 +124,7 @@ async function viewFollowedAccountsStories() {
     
     let totalStoriesViewed = 0;
     let usersWithStories = 0;
+    let newStoriesViewed = 0;
     
     // Check stories for each followed account (limit to first 50 to avoid rate limits)
     const limitedFollowing = following.slice(0, 50);
@@ -94,21 +140,44 @@ async function viewFollowedAccountsStories() {
         
         if (stories.length > 0) {
           usersWithStories++;
-          console.log(lolcat.fromString(`👀 Viewing ${stories.length} stories from ${user.username}`, { colors: { text: 'cyan' } }));
+          let userStoriesViewed = 0;
           
-          // Mark each story as seen
+          console.log(lolcat.fromString(`📖 ${user.username} has ${stories.length} stories`, { colors: { text: 'cyan' } }));
+          
+          // Mark each story as seen (only if not viewed before)
           for (const story of stories) {
             try {
+              // Create unique story ID (timestamp + story ID)
+              const storyId = `${story.timestamp}_${story.id}`;
+              
+              // Check if story was already viewed
+              if (viewedStories.has(storyId)) {
+                console.log(lolcat.fromString(`   ⏭️ Already viewed story from ${user.username}`, { colors: { text: 'gray' } }));
+                continue;
+              }
+              
+              // View the story
               await ig.story.seen([story]);
+              
+              // Mark as viewed
+              viewedStories.add(storyId);
               totalStoriesViewed++;
+              userStoriesViewed++;
+              newStoriesViewed++;
               botStats.storiesViewed++;
+              
+              console.log(lolcat.fromString(`   👀 Viewed new story from ${user.username}`, { colors: { text: 'green' } }));
               
               // Add small delay to avoid rate limiting
               await new Promise(resolve => setTimeout(resolve, 500));
               
             } catch (storyError) {
-              console.log(lolcat.fromString(`⚠️ Error viewing story from ${user.username}: ${storyError.message}`, { colors: { text: 'yellow' } }));
+              console.log(lolcat.fromString(`   ⚠️ Error viewing story from ${user.username}: ${storyError.message}`, { colors: { text: 'yellow' } }));
             }
+          }
+          
+          if (userStoriesViewed > 0) {
+            console.log(lolcat.fromString(`   ✅ Viewed ${userStoriesViewed} new stories from ${user.username}`, { colors: { text: 'green' } }));
           }
         }
         
@@ -121,9 +190,14 @@ async function viewFollowedAccountsStories() {
       }
     }
     
-    console.log(lolcat.fromString(`✅ Auto-view completed! Viewed ${totalStoriesViewed} stories from ${usersWithStories} accounts`, { colors: { text: 'green' } }));
+    // Save viewed stories after processing
+    if (newStoriesViewed > 0) {
+      saveViewedStories();
+    }
     
-    return { totalStoriesViewed, usersWithStories };
+    console.log(lolcat.fromString(`✅ Auto-view completed! Viewed ${newStoriesViewed} NEW stories from ${usersWithStories} accounts`, { colors: { text: 'green' } }));
+    
+    return { totalStoriesViewed: newStoriesViewed, usersWithStories };
     
   } catch (error) {
     console.log(lolcat.fromString(`❌ Error in auto-view stories: ${error.message}`, { colors: { text: 'red' } }));
@@ -131,7 +205,7 @@ async function viewFollowedAccountsStories() {
   }
 }
 
-// SIMPLIFIED DM HANDLER - Inspired by @copy412/instagram-bot approach
+// SIMPLIFIED DM HANDLER - Fixed thread error
 async function checkAndRespondToDMs() {
   try {
     console.log(lolcat.fromString("📨 Checking for new DMs...", { colors: { text: 'blue' } }));
@@ -141,9 +215,12 @@ async function checkAndRespondToDMs() {
     
     for (const thread of inbox) {
       try {
-        // Get thread details
+        // Get thread details - FIXED: Use thread.thread_id directly
         const threadId = thread.thread_id;
-        const threadItems = await ig.feed.directThread(threadId).items();
+        
+        // Get thread items safely
+        const threadFeed = ig.feed.directThread(threadId);
+        const threadItems = await threadFeed.items();
         
         if (threadItems.length > 0) {
           // Get the latest message
@@ -151,6 +228,7 @@ async function checkAndRespondToDMs() {
           
           // Check if it's a text message and not from ourselves
           if (latestMessage.item_type === 'text' && 
+              latestMessage.user_id && 
               latestMessage.user_id.toString() !== ig.state.cookieUserId.toString()) {
             
             const messageId = `${threadId}_${latestMessage.item_id}`;
@@ -161,7 +239,7 @@ async function checkAndRespondToDMs() {
               continue;
             }
             
-            console.log(lolcat.fromString(`💬 New message: "${messageText}" in thread ${threadId}`, { colors: { text: 'cyan' } }));
+            console.log(lolcat.fromString(`💬 New message: "${messageText}"`, { colors: { text: 'cyan' } }));
             
             // Process command
             await processCommand(messageText, latestMessage.user_id, threadId);
@@ -180,7 +258,8 @@ async function checkAndRespondToDMs() {
           }
         }
       } catch (threadError) {
-        console.log(lolcat.fromString(`⚠️ Error processing thread: ${threadError.message}`, { colors: { text: 'yellow' } }));
+        console.log(lolcat.fromString(`⚠️ Error processing thread ${thread.thread_id}: ${threadError.message}`, { colors: { text: 'yellow' } }));
+        continue; // Continue with next thread
       }
     }
     
@@ -219,7 +298,8 @@ async function processCommand(command, userId, threadId) {
                    `• Commands Processed: ${botStats.commandsProcessed}\n` +
                    `• Uptime: ${uptime} minutes\n` +
                    `• Auto View: ${botStats.autoViewEnabled ? '🟢 ON' : '🔴 OFF'}\n` +
-                   `• Last Active: ${botStats.lastActive.toLocaleTimeString()}`;
+                   `• Last Active: ${botStats.lastActive.toLocaleTimeString()}\n` +
+                   `• Stories in Memory: ${viewedStories.size}`;
         break;
         
       case '/viewstories':
@@ -230,7 +310,7 @@ async function processCommand(command, userId, threadId) {
         // Execute story viewing
         const result = await viewFollowedAccountsStories();
         response = `✅ *Story Viewing Complete*\n\n` +
-                   `• Stories Viewed: ${result.totalStoriesViewed}\n` +
+                   `• New Stories Viewed: ${result.totalStoriesViewed}\n` +
                    `• Accounts with Stories: ${result.usersWithStories}\n` +
                    `• Total Stories Viewed (All Time): ${botStats.storiesViewed}`;
         break;
@@ -285,7 +365,7 @@ async function processCommand(command, userId, threadId) {
   }
 }
 
-// SIMPLIFIED MESSAGE SENDING - Inspired by @copy412/instagram-bot
+// SIMPLIFIED MESSAGE SENDING
 async function sendMessage(threadId, message) {
   try {
     await ig.directThread.broadcastText({
@@ -345,6 +425,12 @@ async function login() {
     // Display bot information
     displayBotInfo();
     
+    // Load viewed stories history
+    loadViewedStories();
+    
+    // Clean old stories on startup
+    cleanOldViewedStories();
+    
     // Login
     const loginSuccess = await login();
     
@@ -376,6 +462,12 @@ async function login() {
     }, AUTO_VIEW_INTERVAL);
     
     console.log(lolcat.fromString(`⏰ Auto-view stories scheduled every ${AUTO_VIEW_INTERVAL / 60000} minutes`, { colors: { text: 'blue' } }));
+    
+    // Clean old stories every 6 hours
+    const CLEAN_INTERVAL = 6 * 60 * 60 * 1000;
+    setInterval(() => {
+      cleanOldViewedStories();
+    }, CLEAN_INTERVAL);
     
     // Run initial DM check
     await checkAndRespondToDMs();
