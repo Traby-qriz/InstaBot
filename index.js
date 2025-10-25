@@ -131,60 +131,51 @@ async function viewFollowedAccountsStories() {
   }
 }
 
-// Function to handle DM commands with polling
-async function handleDMCommands() {
+// SIMPLIFIED DM HANDLER - Inspired by @copy412/instagram-bot approach
+async function checkAndRespondToDMs() {
   try {
-    console.log(lolcat.fromString("📨 Checking for new DM commands...", { colors: { text: 'blue' } }));
+    console.log(lolcat.fromString("📨 Checking for new DMs...", { colors: { text: 'blue' } }));
     
     // Get direct inbox
-    const inboxFeed = ig.feed.directInbox();
-    const inbox = await inboxFeed.items();
-    
-    let newCommands = 0;
+    const inbox = await ig.feed.directInbox().items();
     
     for (const thread of inbox) {
       try {
-        // Only process threads with unread messages or recent activity
-        if (thread.last_permanent_item && (thread.unread_count > 0 || Date.now() - parseInt(thread.last_activity_at.toString()) * 1000 < 300000)) {
+        // Get thread details
+        const threadId = thread.thread_id;
+        const threadItems = await ig.feed.directThread(threadId).items();
+        
+        if (threadItems.length > 0) {
+          // Get the latest message
+          const latestMessage = threadItems[threadItems.length - 1];
           
-          const threadFeed = ig.feed.directThread(thread);
-          const threadItems = await threadFeed.items();
-          
-          // Process only recent messages (last 10 minutes)
-          const recentMessages = threadItems.filter(item => 
-            Date.now() - parseInt(item.timestamp.toString()) * 1000 < 600000
-          );
-          
-          for (const message of recentMessages) {
-            if (message.item_type === 'text' && message.text) {
-              const messageId = `${message.thread_id}_${message.item_id}`;
-              
-              // Skip if already processed
-              if (processedMessages.has(messageId)) {
-                continue;
-              }
-              
-              const command = message.text.toLowerCase().trim();
-              const userId = message.user_id;
-              const threadId = message.thread_id;
-              
-              console.log(lolcat.fromString(`💬 New command: "${command}" from user ID: ${userId}`, { colors: { text: 'cyan' } }));
-              
-              // Process command
-              await processCommand(command, userId, threadId);
-              
-              // Mark as processed
-              processedMessages.add(messageId);
-              newCommands++;
-              botStats.commandsProcessed++;
-              botStats.lastActive = new Date();
-              
-              // Mark as read
-              try {
-                await ig.directThread.markItemSeen(threadId, message.item_id);
-              } catch (readError) {
-                console.log(lolcat.fromString(`⚠️ Could not mark message as read: ${readError.message}`, { colors: { text: 'yellow' } }));
-              }
+          // Check if it's a text message and not from ourselves
+          if (latestMessage.item_type === 'text' && 
+              latestMessage.user_id.toString() !== ig.state.cookieUserId.toString()) {
+            
+            const messageId = `${threadId}_${latestMessage.item_id}`;
+            const messageText = latestMessage.text.toLowerCase().trim();
+            
+            // Skip if already processed
+            if (processedMessages.has(messageId)) {
+              continue;
+            }
+            
+            console.log(lolcat.fromString(`💬 New message: "${messageText}" in thread ${threadId}`, { colors: { text: 'cyan' } }));
+            
+            // Process command
+            await processCommand(messageText, latestMessage.user_id, threadId);
+            
+            // Mark as processed
+            processedMessages.add(messageId);
+            botStats.commandsProcessed++;
+            botStats.lastActive = new Date();
+            
+            // Mark as seen
+            try {
+              await ig.directThread.markItemSeen(threadId, latestMessage.item_id);
+            } catch (error) {
+              console.log(lolcat.fromString(`⚠️ Could not mark as seen: ${error.message}`, { colors: { text: 'yellow' } }));
             }
           }
         }
@@ -193,18 +184,14 @@ async function handleDMCommands() {
       }
     }
     
-    if (newCommands > 0) {
-      console.log(lolcat.fromString(`✅ Processed ${newCommands} new commands`, { colors: { text: 'green' } }));
-    }
-    
-    // Clean up old processed messages (keep only last 1000)
-    if (processedMessages.size > 1000) {
+    // Clean up old processed messages
+    if (processedMessages.size > 100) {
       const array = Array.from(processedMessages);
-      processedMessages = new Set(array.slice(-500));
+      processedMessages = new Set(array.slice(-50));
     }
     
   } catch (error) {
-    console.log(lolcat.fromString(`❌ Error in DM handler: ${error.message}`, { colors: { text: 'red' } }));
+    console.log(lolcat.fromString(`❌ Error checking DMs: ${error.message}`, { colors: { text: 'red' } }));
   }
 }
 
@@ -238,7 +225,7 @@ async function processCommand(command, userId, threadId) {
       case '/viewstories':
       case 'viewstories':
         response = "🔄 Starting manual story viewing...";
-        await sendDMResponse(threadId, response);
+        await sendMessage(threadId, response);
         
         // Execute story viewing
         const result = await viewFollowedAccountsStories();
@@ -281,29 +268,33 @@ async function processCommand(command, userId, threadId) {
         break;
         
       default:
-        response = `❓ Unknown command: "${command}"\n\n` +
-                   `Type */help* to see all available commands.`;
+        // Only respond to unknown commands if they start with /
+        if (command.startsWith('/')) {
+          response = `❓ Unknown command: "${command}"\n\n` +
+                     `Type */help* to see all available commands.`;
+        } else {
+          return; // Don't respond to regular messages
+        }
         break;
     }
     
-    await sendDMResponse(threadId, response);
+    await sendMessage(threadId, response);
     
   } catch (error) {
     console.log(lolcat.fromString(`❌ Error processing command: ${error.message}`, { colors: { text: 'red' } }));
-    await sendDMResponse(threadId, "❌ Error processing your command. Please try again later.");
   }
 }
 
-// Function to send DM response
-async function sendDMResponse(threadId, message) {
+// SIMPLIFIED MESSAGE SENDING - Inspired by @copy412/instagram-bot
+async function sendMessage(threadId, message) {
   try {
     await ig.directThread.broadcastText({
       threadIds: [threadId],
       text: message,
     });
-    console.log(lolcat.fromString(`📤 Sent DM response`, { colors: { text: 'green' } }));
+    console.log(lolcat.fromString(`📤 Sent response to DM`, { colors: { text: 'green' } }));
   } catch (error) {
-    console.log(lolcat.fromString(`❌ Error sending DM: ${error.message}`, { colors: { text: 'red' } }));
+    console.log(lolcat.fromString(`❌ Error sending message: ${error.message}`, { colors: { text: 'red' } }));
   }
 }
 
@@ -348,6 +339,7 @@ async function login() {
   }
 }
 
+// MAIN BOT LOOP
 (async () => {
   try {
     // Display bot information
@@ -369,13 +361,13 @@ async function login() {
     // Run auto view stories immediately
     await viewFollowedAccountsStories();
     
-    // Start DM command handler (check every 2 minutes)
-    const DM_CHECK_INTERVAL = 2 * 60 * 1000;
+    // SIMPLIFIED DM POLLING - Check every 1 minute
+    const DM_POLL_INTERVAL = 1 * 60 * 1000;
     setInterval(async () => {
-      await handleDMCommands();
-    }, DM_CHECK_INTERVAL);
+      await checkAndRespondToDMs();
+    }, DM_POLL_INTERVAL);
     
-    console.log(lolcat.fromString(`📨 DM Command Handler started - checking every ${DM_CHECK_INTERVAL / 60000} minutes`, { colors: { text: 'blue' } }));
+    console.log(lolcat.fromString(`📨 DM Handler started - checking every ${DM_POLL_INTERVAL / 60000} minute(s)`, { colors: { text: 'blue' } }));
     
     // Schedule auto view stories every 30 minutes
     const AUTO_VIEW_INTERVAL = 30 * 60 * 1000;
@@ -386,9 +378,9 @@ async function login() {
     console.log(lolcat.fromString(`⏰ Auto-view stories scheduled every ${AUTO_VIEW_INTERVAL / 60000} minutes`, { colors: { text: 'blue' } }));
     
     // Run initial DM check
-    await handleDMCommands();
+    await checkAndRespondToDMs();
     
-    console.log(lolcat.fromString("🤖 Bot is now running and listening for DM commands!", { colors: { text: 'green' } }));
+    console.log(lolcat.fromString("🤖 Bot is now running! Send '/help' in DM to see commands.", { colors: { text: 'green' } }));
     
     // Keep the bot running
     setInterval(() => {}, 60000);
